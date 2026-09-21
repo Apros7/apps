@@ -19,6 +19,9 @@ const els = {
   saveFind: document.getElementById("save-find"),
   gate: document.getElementById("gate"),
   tracker: document.getElementById("tracker"),
+  profile: document.getElementById("profile"),
+  profileBtn: document.getElementById("profile-btn"),
+  profileDone: document.getElementById("profile-done"),
   gateTitle: document.getElementById("gate-title"),
   gateSubtitle: document.getElementById("gate-subtitle"),
   oldHostNote: document.getElementById("old-host-note"),
@@ -34,7 +37,10 @@ const els = {
   weightEnabledInput: document.getElementById("weight-enabled"),
   weightCard: document.getElementById("weight-card"),
   toggleWeightFeature: document.getElementById("toggle-weight-feature"),
-  statusLine: document.getElementById("status-line"),
+  statusEmpty: document.getElementById("status-empty"),
+  statusList: document.getElementById("status-list"),
+  statusNext: document.getElementById("status-next"),
+  statusFertile: document.getElementById("status-fertile"),
   lockBtn: document.getElementById("lock-btn"),
   prevMonth: document.getElementById("prev-month"),
   nextMonth: document.getElementById("next-month"),
@@ -116,6 +122,16 @@ function formatShort(iso) {
   });
 }
 
+function formatRange(start, end) {
+  if (start === end) return formatShort(start);
+  const first = parseISO(start);
+  const last = parseISO(end);
+  if (first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()) {
+    return `${first.getDate()} to ${formatShort(end)}`;
+  }
+  return `${formatShort(start)} to ${formatShort(end)}`;
+}
+
 function formatMonth(d) {
   return d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
 }
@@ -187,6 +203,7 @@ function showSave() {
   els.save.hidden = false;
   els.gate.hidden = true;
   els.tracker.hidden = true;
+  els.profile.hidden = true;
   els.saveSteps.replaceChildren();
   for (const text of saveStepsForDevice()) {
     const item = document.createElement("li");
@@ -318,13 +335,16 @@ function fertileDays(pred) {
 function updateStatus() {
   const pred = computePrediction();
   if (!pred) {
-    els.statusLine.textContent =
-      periods.length === 0
-        ? "Tap days to log your periods."
-        : "Add one more period to see a prediction.";
+    els.statusList.hidden = true;
+    els.statusEmpty.hidden = false;
+    els.statusEmpty.textContent =
+      periods.length === 0 ? "Tap days to log a period." : "Add one more period.";
     return;
   }
-  els.statusLine.textContent = `Next ~ ${formatShort(pred.nextStart)} · Ovulation ~ ${formatShort(pred.ovulation)} · Most fertile ${formatShort(pred.peakDay)}`;
+  els.statusEmpty.hidden = true;
+  els.statusList.hidden = false;
+  els.statusNext.textContent = formatShort(pred.nextStart);
+  els.statusFertile.textContent = formatRange(pred.fertileStart, pred.fertileEnd);
 }
 
 function syncWeightInput() {
@@ -430,13 +450,13 @@ function renderWeights() {
 }
 
 function renderDataCard() {
+  if (!els.dataSummary) return;
   const parts = [`${periods.length} period${periods.length === 1 ? "" : "s"}`];
   if (weightEnabled) {
     parts.push(`${weights.length} weight${weights.length === 1 ? "" : "s"}`);
   }
-  if (appVersion) parts.push(`app ${appVersion}`);
-  els.dataSummary.textContent = `On this phone · ${parts.join(" · ")}`;
-  els.installHint.hidden = isStandalone();
+  els.dataSummary.textContent = `${parts.join(" · ")} on this phone`;
+  if (els.installHint) els.installHint.hidden = isStandalone();
   els.toggleWeightFeature.textContent = weightEnabled
     ? "Turn off weight tracking"
     : "Add weight tracking";
@@ -451,6 +471,7 @@ function showGate(mode) {
   els.save.hidden = true;
   els.gate.hidden = false;
   els.tracker.hidden = true;
+  els.profile.hidden = true;
   const asking = mode === "setup";
   els.weightOpt.hidden = !asking;
   if (asking) {
@@ -487,12 +508,22 @@ function showTracker() {
   els.save.hidden = true;
   els.gate.hidden = true;
   els.tracker.hidden = false;
+  els.profile.hidden = true;
   if (els.moveBanner) els.moveBanner.hidden = !isOldHost();
   applyWeightVisibility();
   renderCalendar();
   updateStatus();
   renderWeights();
   syncWeightInput();
+  renderDataCard();
+}
+
+function showProfile() {
+  closeSheet();
+  els.save.hidden = true;
+  els.gate.hidden = true;
+  els.tracker.hidden = true;
+  els.profile.hidden = false;
   renderDataCard();
 }
 
@@ -866,7 +897,8 @@ async function importBackupFile(file) {
   const saved = await db.replaceAll(parsed);
   periods = saved.periods;
   weights = saved.weights;
-  showTracker();
+  applyWeightVisibility();
+  renderDataCard();
   setDataMessage(
     `Imported ${periods.length} period${periods.length === 1 ? "" : "s"} and ${weights.length} weight${weights.length === 1 ? "" : "s"}.`
   );
@@ -1043,6 +1075,14 @@ els.lockBtn.addEventListener("click", () => {
   showGate("unlock");
 });
 
+els.profileBtn.addEventListener("click", () => {
+  showProfile();
+});
+
+els.profileDone.addEventListener("click", () => {
+  showTracker();
+});
+
 els.prevMonth.addEventListener("click", () => {
   viewMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1);
   renderCalendar();
@@ -1170,6 +1210,7 @@ document.addEventListener("keydown", (e) => {
       renderCalendar();
     }
     closeSheet();
+    if (!els.profile.hidden) showTracker();
   }
 });
 

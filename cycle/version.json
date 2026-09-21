@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.6",
-  "message": "After saving Cycle, send people to the Home Screen icon",
+  "version": "2026.09.21.7",
+  "message": "Move data into You and simplify Next and Fertile",
   "files": [
     "./",
     "./index.html",

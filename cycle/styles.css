@@ -297,16 +297,79 @@ body {
 
 .top {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.1rem;
 }
 
-.status {
+.profile-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--glass);
+  color: var(--ink);
+  display: grid;
+  place-items: center;
+}
+
+.profile-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+.status-empty {
+  margin: 0 0 1.25rem;
+  color: var(--stone);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.status-list {
+  margin: 0 0 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.status-row {
+  display: grid;
+  grid-template-columns: 4.6rem minmax(0, 1fr);
+  align-items: baseline;
+  gap: 0.7rem;
+}
+
+.status-row dt {
+  margin: 0;
+  color: var(--stone);
   font-size: 0.95rem;
-  max-width: 19rem;
-  line-height: 1.4;
+}
+
+.status-row dd {
+  margin: 0;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: 1.45rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.profile-summary {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.profile .privacy {
+  margin-top: 0.35rem;
+}
+
+.profile .data-actions {
+  margin-top: 1.2rem;
+}
+
+.profile .data-actions + .btn {
+  margin-top: 0.75rem;
 }
 
 .move-banner {
