@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.10",
-  "message": "Send people to the Home Screen app and drop the git repo field",
+  "version": "2026.09.21.11",
+  "message": "Keep the website as a download page you can use again",
   "files": [
     "./",
     "./index.html",

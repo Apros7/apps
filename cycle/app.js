@@ -1,7 +1,6 @@
 import * as db from "./storage.js";
 
 const HOSTED_TOKEN_KEY = "cycle_token";
-const SAVE_SKIP_KEY = "cycle_skip_save";
 const MOVED_KEY = "cycle_moved";
 const MOVED_WEIGHTS_KEY = "cycle_moved_has_weights";
 const MOVE_ERROR_KEY = "cycle_move_error";
@@ -188,12 +187,12 @@ function saveStepsForDevice() {
       ];
     case "android":
       return [
-        "Tap Add to this phone, or Install app in the menu.",
+        "Tap Add to this phone. If nothing happens, tap the three dots, then Install app or Add to Home screen.",
         "Leave this page and open Cycle from your Home Screen.",
       ];
     default:
       return [
-        "Add Cycle to your Home Screen.",
+        "Tap Add to this phone, or use the browser menu to install it.",
         "Leave this page and open that icon.",
       ];
   }
@@ -218,6 +217,9 @@ function showSave() {
   if (els.saveFind) {
     els.saveFind.textContent = "When it is on your Home Screen, go use that.";
   }
+  if (els.saveInstall) {
+    els.saveInstall.hidden = deviceKind().startsWith("ios");
+  }
   const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
   if (els.saveError) {
     els.saveError.hidden = !moveError;
@@ -225,13 +227,21 @@ function showSave() {
   }
 }
 
+function wantsTryHere() {
+  return new URLSearchParams(location.search).get("try") === "1";
+}
+
 function shouldShowSave() {
   if (isOldHost()) return false;
-  return !isStandalone() && sessionStorage.getItem(SAVE_SKIP_KEY) !== "1";
+  if (isStandalone()) return false;
+  if (wantsTryHere()) return false;
+  return true;
 }
 
 async function tryHere() {
-  sessionStorage.setItem(SAVE_SKIP_KEY, "1");
+  const url = new URL(location.href);
+  url.searchParams.set("try", "1");
+  history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
   els.save.hidden = true;
   await startApp();
 }
@@ -909,17 +919,23 @@ let deferredInstall = null;
 window.addEventListener("beforeinstallprompt", (event) => {
   event.preventDefault();
   deferredInstall = event;
-  if (els.saveInstall && !els.save.hidden) els.saveInstall.hidden = false;
+  if (els.saveInstall && !els.save.hidden && !deviceKind().startsWith("ios")) {
+    els.saveInstall.hidden = false;
+  }
 });
 
 els.saveInstall.addEventListener("click", async () => {
-  if (!deferredInstall) return;
-  deferredInstall.prompt();
-  const choice = await deferredInstall.userChoice;
-  deferredInstall = null;
-  els.saveInstall.hidden = true;
-  if (choice?.outcome === "accepted" && els.saveFind) {
-    els.saveFind.textContent = "It's on your Home Screen. Go open Cycle from there.";
+  if (deferredInstall) {
+    deferredInstall.prompt();
+    const choice = await deferredInstall.userChoice;
+    deferredInstall = null;
+    if (choice?.outcome === "accepted" && els.saveFind) {
+      els.saveFind.textContent = "It's on your Home Screen. Go open Cycle from there.";
+    }
+    return;
+  }
+  if (els.saveFind) {
+    els.saveFind.textContent = "Tap the three dots, then Add to Home screen or Install app.";
   }
 });
 
@@ -928,7 +944,6 @@ els.saveTry.addEventListener("click", () => {
 });
 
 window.addEventListener("appinstalled", () => {
-  if (els.saveInstall) els.saveInstall.hidden = true;
   if (els.saveFind) els.saveFind.textContent = "It's on your Home Screen. Go open Cycle from there.";
 });
 
