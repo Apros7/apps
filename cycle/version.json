@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.3",
-  "message": "Start over deletes local data",
+  "version": "2026.09.21.4",
+  "message": "Home Screen save guide",
   "files": [
     "./",
     "./index.html",

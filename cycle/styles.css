@@ -127,6 +127,27 @@ body {
   text-align: center;
 }
 
+.save-steps {
+  max-width: 22rem;
+  margin: 1.35rem auto 1.15rem;
+  padding: 0 0 0 1.2rem;
+  text-align: left;
+  color: var(--ink);
+  line-height: 1.45;
+}
+
+.save-steps li + li {
+  margin-top: 0.7rem;
+}
+
+.save-inner .btn {
+  width: 100%;
+}
+
+.save-inner .btn.secondary {
+  margin-top: 0.7rem;
+}
+
 .mark {
   width: 4.5rem;
   height: 4.5rem;

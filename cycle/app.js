@@ -2,8 +2,13 @@ import * as db from "./storage.js";
 
 const GIT_REPO_KEY = "cycle_git_repo";
 const HOSTED_TOKEN_KEY = "cycle_token";
+const SAVE_SKIP_KEY = "cycle_skip_save";
 
 const els = {
+  save: document.getElementById("save"),
+  saveSteps: document.getElementById("save-steps"),
+  saveInstall: document.getElementById("save-install"),
+  saveContinue: document.getElementById("save-continue"),
   gate: document.getElementById("gate"),
   tracker: document.getElementById("tracker"),
   gateTitle: document.getElementById("gate-title"),
@@ -115,6 +120,64 @@ function isStandalone() {
     window.matchMedia("(display-mode: standalone)").matches ||
     window.navigator.standalone === true
   );
+}
+
+function deviceKind() {
+  const ua = navigator.userAgent || "";
+  const iOS =
+    /iPhone|iPad|iPod/i.test(ua) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  if (iOS) {
+    const safari = /Safari/i.test(ua) && !/CriOS|FxiOS|EdgiOS/i.test(ua);
+    return safari ? "ios-safari" : "ios-other";
+  }
+  if (/Android/i.test(ua)) return "android";
+  return "other";
+}
+
+function saveStepsForDevice() {
+  switch (deviceKind()) {
+    case "ios-safari":
+      return [
+        "Tap the Share button at the bottom (the square with the arrow).",
+        "Tap Add to Home Screen, then Add.",
+        "Open Cycle from your Home Screen.",
+      ];
+    case "ios-other":
+      return [
+        "Open this page in Safari.",
+        "Tap Share, then Add to Home Screen.",
+        "Open Cycle from your Home Screen.",
+      ];
+    case "android":
+      return [
+        "Tap the three dots in the corner.",
+        "Tap Add to Home screen or Install app.",
+        "Open Cycle from your Home Screen.",
+      ];
+    default:
+      return [
+        "Open this page on your phone.",
+        "Add Cycle to your Home Screen.",
+        "Use the new icon, not the website.",
+      ];
+  }
+}
+
+function showSave() {
+  els.save.hidden = false;
+  els.gate.hidden = true;
+  els.tracker.hidden = true;
+  els.saveSteps.replaceChildren();
+  for (const text of saveStepsForDevice()) {
+    const item = document.createElement("li");
+    item.textContent = text;
+    els.saveSteps.appendChild(item);
+  }
+}
+
+function shouldShowSave() {
+  return !isStandalone() && sessionStorage.getItem(SAVE_SKIP_KEY) !== "1";
 }
 
 function setDataMessage(text, isError = false) {
@@ -349,6 +412,7 @@ function applyWeightVisibility() {
 
 function showGate(mode) {
   gateMode = mode;
+  els.save.hidden = true;
   els.gate.hidden = false;
   els.tracker.hidden = true;
   const asking = mode === "setup" || mode === "migrate";
@@ -373,6 +437,7 @@ function showGate(mode) {
 }
 
 function showTracker() {
+  els.save.hidden = true;
   els.gate.hidden = true;
   els.tracker.hidden = false;
   applyWeightVisibility();
@@ -699,9 +764,7 @@ async function loadAppVersion() {
   }
 }
 
-async function bootstrap() {
-  registerWorker();
-  loadAppVersion().then(() => renderDataCard());
+async function startApp() {
   els.gitRepo.value = localStorage.getItem(GIT_REPO_KEY) || "";
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
 
@@ -723,6 +786,37 @@ async function bootstrap() {
   }
   showGate("setup");
 }
+
+async function bootstrap() {
+  registerWorker();
+  loadAppVersion().then(() => renderDataCard());
+  if (shouldShowSave()) {
+    showSave();
+    return;
+  }
+  await startApp();
+}
+
+let deferredInstall = null;
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  deferredInstall = event;
+  if (els.saveInstall && !els.save.hidden) els.saveInstall.hidden = false;
+});
+
+els.saveContinue.addEventListener("click", async () => {
+  sessionStorage.setItem(SAVE_SKIP_KEY, "1");
+  els.save.hidden = true;
+  await startApp();
+});
+
+els.saveInstall.addEventListener("click", async () => {
+  if (!deferredInstall) return;
+  deferredInstall.prompt();
+  await deferredInstall.userChoice;
+  deferredInstall = null;
+  els.saveInstall.hidden = true;
+});
 
 els.pinForm.addEventListener("submit", async (e) => {
   e.preventDefault();

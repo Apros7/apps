@@ -84,22 +84,8 @@
         <h2>Cycle</h2>
         <p class="meta">Period tracker</p>
       </div>
-      <a class="get" id="get-cycle" href="./cycle/">Get</a>
+      <a class="get" href="./cycle/">Add to phone</a>
     </article>
-    <p class="how" id="how">
-      Get opens the app. Then add it to your Home Screen so it stays on your phone.
-    </p>
-
-    <script>
-      const how = document.getElementById("how");
-      const ua = navigator.userAgent;
-      const iOS = /iPhone|iPad|iPod/i.test(ua);
-      const android = /Android/i.test(ua);
-      if (iOS) {
-        how.textContent = "Get, then tap Share → Add to Home Screen.";
-      } else if (android) {
-        how.textContent = "Get, then tap the menu → Install app (or Add to Home screen).";
-      }
-    </script>
+    <p class="how">Cycle will show you how to save it, like any other app.</p>
   </body>
 </html>
