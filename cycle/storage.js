@@ -183,6 +183,19 @@ export function lock() {
   setUnlocked(false);
 }
 
+export async function wipeAll() {
+  const db = await openDb();
+  const names = [...db.objectStoreNames];
+  if (names.length) {
+    const tx = db.transaction(names, "readwrite");
+    for (const name of names) tx.objectStore(name).clear();
+    await txDone(tx);
+  }
+  db.close();
+  setUnlocked(false);
+  localStorage.removeItem(PIN_ATTEMPTS_KEY);
+}
+
 export async function listPeriods() {
   const db = await openDb();
   const rows = (await requestToPromise(db.transaction("periods").objectStore("periods").getAll())) || [];

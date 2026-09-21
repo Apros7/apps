@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.2",
-  "message": "Shorter setup copy",
+  "version": "2026.09.21.3",
+  "message": "Start over deletes local data",
   "files": [
     "./",
     "./index.html",

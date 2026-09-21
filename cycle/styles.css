@@ -659,6 +659,12 @@ body {
   border-radius: 14px;
 }
 
+.data-reset {
+  width: 100%;
+  margin-top: 0.55rem;
+  border-radius: 14px;
+}
+
 .sheet-backdrop {
   position: fixed;
   inset: 0;

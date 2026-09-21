@@ -44,6 +44,7 @@ const els = {
   importFile: document.getElementById("import-file"),
   gitRepo: document.getElementById("git-repo"),
   updateBtn: document.getElementById("update-btn"),
+  resetBtn: document.getElementById("reset-btn"),
   dataMessage: document.getElementById("data-message"),
 };
 
@@ -847,6 +848,25 @@ els.gitRepo.addEventListener("change", () => {
 
 els.updateBtn.addEventListener("click", () => {
   checkForUpdates();
+});
+
+els.resetBtn.addEventListener("click", async () => {
+  const ok = window.confirm(
+    "Delete all periods, weights, and your PIN on this phone? This cannot be undone. Export a backup first if you want to keep it."
+  );
+  if (!ok) return;
+  try {
+    await db.wipeAll();
+    periods = [];
+    weights = [];
+    rangeStart = null;
+    weightEnabled = false;
+    closeSheet();
+    applyWeightVisibility();
+    showGate("setup");
+  } catch (err) {
+    setDataMessage(err.message || "Could not delete data.", true);
+  }
 });
 
 els.toggleWeightFeature.addEventListener("click", async () => {
