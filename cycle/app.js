@@ -355,16 +355,15 @@ function showGate(mode) {
   if (asking) els.weightEnabledInput.checked = mode === "migrate";
   if (mode === "setup") {
     els.gateTitle.textContent = "Welcome";
-    els.gateSubtitle.textContent = "Choose a 4–12 digit PIN to keep this private on this phone.";
+    els.gateSubtitle.textContent = "Pick a PIN. Stays on this phone.";
     els.pinSubmit.textContent = "Create PIN";
   } else if (mode === "migrate") {
-    els.gateTitle.textContent = "Move to this phone";
-    els.gateSubtitle.textContent =
-      "Enter your current PIN to copy your logs onto this device. They will stay here after that.";
+    els.gateTitle.textContent = "Move here";
+    els.gateSubtitle.textContent = "Enter your PIN. Stays on this phone.";
     els.pinSubmit.textContent = "Copy to this phone";
   } else {
     els.gateTitle.textContent = "Hello";
-    els.gateSubtitle.textContent = "Enter your PIN to continue.";
+    els.gateSubtitle.textContent = "Enter your PIN.";
     els.pinSubmit.textContent = "Unlock";
   }
   els.pinError.hidden = true;

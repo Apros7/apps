@@ -4,27 +4,101 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Apps</title>
+    <link rel="icon" type="image/png" href="./cycle/icons/icon-192.png" />
     <style>
+      :root {
+        --ink: #2c2622;
+        --muted: #6f675f;
+        --line: rgba(44, 38, 34, 0.1);
+        --berry: #b03d4f;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
         margin: 2rem auto;
-        max-width: 36rem;
-        padding: 0 1rem;
-        font: 16px/1.5 system-ui, sans-serif;
+        max-width: 26rem;
+        padding: 0 1rem 3rem;
+        font: 16px/1.45 system-ui, sans-serif;
+        color: var(--ink);
       }
-      a {
-        color: inherit;
+      h1 {
+        margin: 0 0 0.4rem;
+        font-size: 1.7rem;
+      }
+      .lede {
+        margin: 0 0 1.5rem;
+        color: var(--muted);
+      }
+      .card {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 0.85rem;
+        align-items: center;
+        padding: 1rem;
+        border: 1px solid var(--line);
+        border-radius: 20px;
+        background: #fffaf7;
+      }
+      .card img {
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+      }
+      .card h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .card .meta {
+        margin: 0.15rem 0 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+      .get {
+        display: inline-block;
+        padding: 0.45rem 0.95rem;
+        border-radius: 999px;
+        background: var(--berry);
+        color: #fffaf7;
+        font-weight: 700;
+        font-size: 0.92rem;
+        text-decoration: none;
+      }
+      .how {
+        margin: 0.7rem 0 0;
+        color: var(--muted);
+        font-size: 0.88rem;
       }
     </style>
   </head>
   <body>
     <h1>Apps</h1>
-    <p>Free apps that stay on your device. No account.</p>
-    <p>
-      Everything stays on your device. You can export your data anytime. We do not keep any of it.
+    <p class="lede">
+      These live on your phone. Your data stays there — we never see it, and we don’t keep a copy.
     </p>
-    <p>
-      <a href="./cycle/">Cycle</a> — period tracker. Open it in Safari, then Share → Add to Home
-      Screen.
+
+    <article class="card">
+      <img src="./cycle/icons/icon-192.png" width="56" height="56" alt="" />
+      <div>
+        <h2>Cycle</h2>
+        <p class="meta">Period tracker</p>
+      </div>
+      <a class="get" id="get-cycle" href="./cycle/">Get</a>
+    </article>
+    <p class="how" id="how">
+      Get opens the app. Then add it to your Home Screen so it stays on your phone.
     </p>
+
+    <script>
+      const how = document.getElementById("how");
+      const ua = navigator.userAgent;
+      const iOS = /iPhone|iPad|iPod/i.test(ua);
+      const android = /Android/i.test(ua);
+      if (iOS) {
+        how.textContent = "Get, then tap Share → Add to Home Screen.";
+      } else if (android) {
+        how.textContent = "Get, then tap the menu → Install app (or Add to Home screen).";
+      }
+    </script>
   </body>
 </html>
