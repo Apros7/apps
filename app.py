@@ -22,7 +22,7 @@ DATA_DIR = ROOT / "data"
 CONFIG_PATH = DATA_DIR / "config.json"
 PERIODS_PATH = DATA_DIR / "periods.json"
 WEIGHTS_PATH = DATA_DIR / "weights.json"
-STATIC_DIR = ROOT / "apps" / "cycle"
+STATIC_DIR = ROOT / "cycle"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

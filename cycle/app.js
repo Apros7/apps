@@ -553,8 +553,8 @@ async function loadRemoteVersion(repoUrl) {
   const parsed = parseGitHubRepo(repoUrl);
   if (parsed) {
     const bases = [
-      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/apps/cycle`,
       `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/cycle`,
+      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/apps/cycle`,
       `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/static`,
       `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD`,
     ];
