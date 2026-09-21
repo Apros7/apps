@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.7",
-  "message": "Move data into You and simplify Next and Fertile",
+  "version": "2026.09.21.8",
+  "message": "Update Cycle on open and launch it as a phone app",
   "files": [
     "./",
     "./index.html",

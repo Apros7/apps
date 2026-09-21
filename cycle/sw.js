@@ -1,9 +1,37 @@
-const CACHE = "cycle-offline";
+const CACHE_PREFIX = "cycle-offline-";
+
+function isAppFile(url) {
+  return (
+    url.pathname.endsWith("/") ||
+    url.pathname.endsWith("/index.html") ||
+    url.pathname.endsWith(".js") ||
+    url.pathname.endsWith(".css") ||
+    url.pathname.endsWith(".json") ||
+    url.pathname.endsWith(".webmanifest")
+  );
+}
+
+async function versionedCacheName() {
+  try {
+    const res = await fetch("./version.json", { cache: "no-store" });
+    const version = await res.json();
+    return CACHE_PREFIX + (version.version || "dev");
+  } catch {
+    return `${CACHE_PREFIX}offline`;
+  }
+}
+
+async function openAppCache() {
+  const keys = (await caches.keys()).filter((key) => key.startsWith(CACHE_PREFIX)).sort();
+  if (keys.length) return caches.open(keys[keys.length - 1]);
+  return caches.open(`${CACHE_PREFIX}offline`);
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
     (async () => {
-      const cache = await caches.open(CACHE);
+      const cacheName = await versionedCacheName();
+      const cache = await caches.open(cacheName);
       try {
         const res = await fetch("./version.json", { cache: "no-store" });
         const version = await res.json();
@@ -27,9 +55,12 @@ self.addEventListener("install", (event) => {
 self.addEventListener("activate", (event) => {
   event.waitUntil(
     (async () => {
+      const keep = await versionedCacheName();
       const keys = await caches.keys();
       await Promise.all(
-        keys.filter((key) => key !== CACHE).map((key) => caches.delete(key))
+        keys
+          .filter((key) => key.startsWith(CACHE_PREFIX) && key !== keep)
+          .map((key) => caches.delete(key))
       );
       await self.clients.claim();
     })()
@@ -42,19 +73,14 @@ self.addEventListener("fetch", (event) => {
   if (url.origin !== self.location.origin) return;
   if (url.pathname.includes("/api/")) return;
 
-  const networkFirst =
-    event.request.mode === "navigate" ||
-    url.pathname.endsWith("/") ||
-    url.pathname.endsWith("/index.html") ||
-    url.pathname.endsWith("/app.js") ||
-    url.pathname.endsWith("/sw.js");
+  const networkFirst = event.request.mode === "navigate" || isAppFile(url);
 
   event.respondWith(
     (async () => {
       if (networkFirst) {
         try {
           const fresh = await fetch(event.request);
-          const cache = await caches.open(CACHE);
+          const cache = await openAppCache();
           cache.put(event.request, fresh.clone());
           return fresh;
         } catch (err) {
@@ -70,7 +96,10 @@ self.addEventListener("fetch", (event) => {
       const cached = await caches.match(event.request, { ignoreSearch: true });
       if (cached) return cached;
       try {
-        return await fetch(event.request);
+        const fresh = await fetch(event.request);
+        const cache = await openAppCache();
+        cache.put(event.request, fresh.clone());
+        return fresh;
       } catch (err) {
         if (event.request.mode === "navigate") {
           const fallback = await caches.match("./index.html");

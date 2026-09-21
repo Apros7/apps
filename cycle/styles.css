@@ -144,6 +144,10 @@ body {
   width: 100%;
 }
 
+.save-inner .btn + .btn {
+  margin-top: 0.7rem;
+}
+
 .save-find {
   margin: 1rem 0 0;
   font-family: "Fraunces", Georgia, "Times New Roman", serif;

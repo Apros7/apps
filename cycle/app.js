@@ -16,6 +16,7 @@ const els = {
   saveError: document.getElementById("save-error"),
   saveSteps: document.getElementById("save-steps"),
   saveInstall: document.getElementById("save-install"),
+  saveOpen: document.getElementById("save-open"),
   saveFind: document.getElementById("save-find"),
   gate: document.getElementById("gate"),
   tracker: document.getElementById("tracker"),
@@ -85,6 +86,8 @@ let activePeriodId = null;
 /** @type {"setup" | "unlock" | "migrate"} */
 let gateMode = "setup";
 let appVersion = "";
+const SEEN_VERSION_KEY = "cycle_seen_version";
+let launchedAsApp = false;
 let waitingForUpdate = false;
 let weightEnabled = false;
 
@@ -152,7 +155,10 @@ function isOldHost() {
 
 function isStandalone() {
   return (
+    launchedAsApp ||
     window.matchMedia("(display-mode: standalone)").matches ||
+    window.matchMedia("(display-mode: fullscreen)").matches ||
+    window.matchMedia("(display-mode: minimal-ui)").matches ||
     window.navigator.standalone === true
   );
 }
@@ -186,15 +192,13 @@ function saveStepsForDevice() {
       ];
     case "android":
       return [
-        "Tap the three dots in the corner.",
-        "Tap Add to Home screen or Install app.",
-        "Open Cycle from your Home Screen.",
+        "Tap Add to this phone, or the three dots, then Install app.",
+        "Tap Open.",
       ];
     default:
       return [
-        "Open this page on your phone.",
         "Add Cycle to your Home Screen.",
-        "Use the new icon, not the website.",
+        "Tap Open to use it as an app.",
       ];
   }
 }
@@ -213,7 +217,14 @@ function showSave() {
   const moved = sessionStorage.getItem(MOVED_KEY) === "1";
   if (moved && els.saveTitle && els.saveSubtitle) {
     els.saveTitle.textContent = "Logs are on this phone";
-    els.saveSubtitle.textContent = "Now save Cycle to your Home Screen. Then use that icon.";
+    els.saveSubtitle.textContent = "Now save Cycle to your Home Screen. Then open that app.";
+  }
+  const ios = deviceKind().startsWith("ios");
+  if (els.saveOpen) els.saveOpen.hidden = ios;
+  if (els.saveFind) {
+    els.saveFind.textContent = ios
+      ? "Open it from your Home Screen <3"
+      : "Then it opens as an app, not a website.";
   }
   const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
   if (els.saveError) {
@@ -225,6 +236,28 @@ function showSave() {
 function shouldShowSave() {
   if (isOldHost()) return false;
   return !isStandalone() && sessionStorage.getItem(SAVE_SKIP_KEY) !== "1";
+}
+
+async function openPhoneApp() {
+  if (isStandalone()) {
+    sessionStorage.setItem(SAVE_SKIP_KEY, "1");
+    els.save.hidden = true;
+    await startApp();
+    return;
+  }
+  if (deferredInstall) {
+    try {
+      deferredInstall.prompt();
+      const choice = await deferredInstall.userChoice;
+      deferredInstall = null;
+      if (els.saveInstall) els.saveInstall.hidden = true;
+      if (choice?.outcome !== "accepted") return;
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    } catch {
+      deferredInstall = null;
+    }
+  }
+  location.href = "web+cycle://open";
 }
 
 function showMoveError(el, err) {
@@ -799,8 +832,8 @@ async function loadRemoteVersion(repoUrl) {
   return fetchVersionJson(new URL("./", document.baseURI).href);
 }
 
-async function cacheRemoteFiles(base, files) {
-  const cache = await caches.open("cycle-offline");
+async function cacheRemoteFiles(base, files, version) {
+  const cache = await caches.open(`cycle-offline-${version || "dev"}`);
   await Promise.all(
     (files || []).map(async (file) => {
       const remote = file === "./" ? `${base}/index.html` : `${base}/${file.replace(/^\.\//, "")}`;
@@ -846,7 +879,7 @@ async function checkForUpdates() {
     const remote = await loadRemoteVersion(repo);
     const remoteVersion = remote.version?.version || "";
     if (repo && remoteVersion && remoteVersion !== appVersion) {
-      await cacheRemoteFiles(remote.base, remote.version.files);
+      await cacheRemoteFiles(remote.base, remote.version.files, remoteVersion);
       waitingForUpdate = true;
       setDataMessage(`Updated to ${remoteVersion}. Reloading…`);
       const waiting = await applyServiceWorkerUpdate();
@@ -908,13 +941,48 @@ async function registerWorker() {
   if (!("serviceWorker" in navigator)) return;
   try {
     const reg = await navigator.serviceWorker.register("./sw.js");
+    let reloading = false;
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (waitingForUpdate) location.reload();
+      if (reloading) return;
+      reloading = true;
+      location.reload();
     });
     if (reg.waiting) reg.waiting.postMessage("skipWaiting");
+    await reg.update();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") reg.update();
+    });
   } catch (err) {
     console.warn("Service worker not registered", err);
   }
+}
+
+async function pullHostedUpdate() {
+  try {
+    const res = await fetch(`./version.json?t=${Date.now()}`, { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const next = data.version || "";
+    const prev = localStorage.getItem(SEEN_VERSION_KEY) || "";
+    if (next) localStorage.setItem(SEEN_VERSION_KEY, next);
+    if (!prev || !next || prev === next) return;
+    const keys = await caches.keys();
+    await Promise.all(
+      keys.filter((key) => key.startsWith("cycle-offline")).map((key) => caches.delete(key))
+    );
+    await applyServiceWorkerUpdate();
+  } catch {
+    /* offline: keep the copy already on the phone */
+  }
+}
+
+function consumeLaunchParam() {
+  const params = new URLSearchParams(location.search);
+  if (!params.has("launch")) return;
+  launchedAsApp = true;
+  const url = new URL(location.href);
+  url.searchParams.delete("launch");
+  history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
 }
 
 async function loadAppVersion() {
@@ -952,8 +1020,10 @@ async function startApp() {
 }
 
 async function bootstrap() {
+  consumeLaunchParam();
   registerWorker();
   loadAppVersion().then(() => renderDataCard());
+  await pullHostedUpdate();
   try {
     await takeIncomingMove();
   } catch (err) {
@@ -979,9 +1049,11 @@ els.saveInstall.addEventListener("click", async () => {
   const choice = await deferredInstall.userChoice;
   deferredInstall = null;
   els.saveInstall.hidden = true;
-  if (choice?.outcome === "accepted" && els.saveFind) {
-    els.saveFind.textContent = "go find the app on your phone now <3";
-  }
+  if (choice?.outcome === "accepted" && els.saveOpen) els.saveOpen.hidden = false;
+});
+
+els.saveOpen.addEventListener("click", () => {
+  openPhoneApp();
 });
 
 window.addEventListener("appinstalled", () => {
