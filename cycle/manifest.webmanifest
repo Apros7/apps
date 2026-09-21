@@ -7,16 +7,9 @@
   "id": "./",
   "display": "standalone",
   "display_override": ["standalone", "fullscreen"],
-  "handle_links": "preferred",
   "launch_handler": {
     "client_mode": ["navigate-existing", "auto"]
   },
-  "protocol_handlers": [
-    {
-      "protocol": "web+cycle",
-      "url": "./?launch=%s"
-    }
-  ],
   "background_color": "#F6EBE6",
   "theme_color": "#F6EBE6",
   "orientation": "portrait",

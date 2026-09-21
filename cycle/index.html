@@ -73,12 +73,12 @@
           <div class="mark" aria-hidden="true"></div>
           <p class="brand">Cycle</p>
           <h1 id="save-title">Put Cycle on your phone</h1>
-          <p id="save-subtitle" class="subtitle">Then it is just an app on your Home Screen. Your logs stay on this phone.</p>
+          <p id="save-subtitle" class="subtitle">Then open it from your Home Screen. Your logs stay there.</p>
           <p id="save-error" class="error" hidden></p>
           <ol id="save-steps" class="save-steps"></ol>
           <button type="button" id="save-install" class="btn primary" hidden>Add to this phone</button>
-          <button type="button" id="save-open" class="btn primary">Open</button>
-          <p id="save-find" class="save-find">Next time, tap Cycle on your Home Screen.</p>
+          <p id="save-find" class="save-find">When it is on your Home Screen, go use that.</p>
+          <button type="button" id="save-try" class="save-try">Don't want to download? Try it here</button>
         </div>
       </section>
 
@@ -229,7 +229,7 @@
           <button type="button" id="profile-done" class="btn ghost">Done</button>
         </header>
         <p id="data-summary" class="profile-summary">Logs stay on this phone.</p>
-        <p class="privacy">Updates change the app, not your logs. New versions install when you open Cycle.</p>
+        <p class="privacy">Updates install when you open Cycle. They do not touch your logs.</p>
         <p id="install-hint" class="data-note">
           Save Cycle to your Home Screen if you opened this in the browser.
         </p>
@@ -241,19 +241,6 @@
         <button type="button" id="toggle-weight-feature" class="btn secondary data-update">
           Add weight tracking
         </button>
-        <button type="button" id="update-btn" class="btn secondary data-update">
-          Check for updates
-        </button>
-        <label class="field data-repo">
-          <span>Git repo for updates</span>
-          <input
-            id="git-repo"
-            type="url"
-            inputmode="url"
-            placeholder="https://github.com/Apros7/apps"
-            autocomplete="off"
-          />
-        </label>
         <button type="button" id="lock-btn" class="btn secondary data-update">Lock</button>
         <button type="button" id="reset-btn" class="btn danger data-reset">
           Delete data

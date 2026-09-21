@@ -1,6 +1,5 @@
 import * as db from "./storage.js";
 
-const GIT_REPO_KEY = "cycle_git_repo";
 const HOSTED_TOKEN_KEY = "cycle_token";
 const SAVE_SKIP_KEY = "cycle_skip_save";
 const MOVED_KEY = "cycle_moved";
@@ -16,8 +15,8 @@ const els = {
   saveError: document.getElementById("save-error"),
   saveSteps: document.getElementById("save-steps"),
   saveInstall: document.getElementById("save-install"),
-  saveOpen: document.getElementById("save-open"),
   saveFind: document.getElementById("save-find"),
+  saveTry: document.getElementById("save-try"),
   gate: document.getElementById("gate"),
   tracker: document.getElementById("tracker"),
   profile: document.getElementById("profile"),
@@ -67,8 +66,6 @@ const els = {
   exportBtn: document.getElementById("export-btn"),
   importBtn: document.getElementById("import-btn"),
   importFile: document.getElementById("import-file"),
-  gitRepo: document.getElementById("git-repo"),
-  updateBtn: document.getElementById("update-btn"),
   resetBtn: document.getElementById("reset-btn"),
   dataMessage: document.getElementById("data-message"),
 };
@@ -88,7 +85,6 @@ let gateMode = "setup";
 let appVersion = "";
 const SEEN_VERSION_KEY = "cycle_seen_version";
 let launchedAsApp = false;
-let waitingForUpdate = false;
 let weightEnabled = false;
 
 function startOfMonth(d) {
@@ -182,23 +178,23 @@ function saveStepsForDevice() {
       return [
         "Tap the Share button at the bottom (the square with the arrow).",
         "Tap Add to Home Screen, then Add.",
-        "Open Cycle from your Home Screen.",
+        "Leave this page and open Cycle from your Home Screen.",
       ];
     case "ios-other":
       return [
         "Open this page in Safari.",
         "Tap Share, then Add to Home Screen.",
-        "Open Cycle from your Home Screen.",
+        "Leave this page and open Cycle from your Home Screen.",
       ];
     case "android":
       return [
         "Tap Add to this phone, or Install app in the menu.",
-        "Next time, open Cycle from your Home Screen.",
+        "Leave this page and open Cycle from your Home Screen.",
       ];
     default:
       return [
         "Add Cycle to your Home Screen.",
-        "Next time, open it from that icon.",
+        "Leave this page and open that icon.",
       ];
   }
 }
@@ -219,9 +215,8 @@ function showSave() {
     els.saveTitle.textContent = "Logs are on this phone";
     els.saveSubtitle.textContent = "Save Cycle to your Home Screen, then open that icon.";
   }
-  if (els.saveOpen) els.saveOpen.hidden = false;
   if (els.saveFind) {
-    els.saveFind.textContent = "Next time, tap Cycle on your Home Screen.";
+    els.saveFind.textContent = "When it is on your Home Screen, go use that.";
   }
   const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
   if (els.saveError) {
@@ -235,24 +230,7 @@ function shouldShowSave() {
   return !isStandalone() && sessionStorage.getItem(SAVE_SKIP_KEY) !== "1";
 }
 
-async function openPhoneApp() {
-  if (
-    deferredInstall &&
-    !isStandalone() &&
-    (deviceKind() === "android" || deviceKind() === "other")
-  ) {
-    try {
-      deferredInstall.prompt();
-      const choice = await deferredInstall.userChoice;
-      deferredInstall = null;
-      if (els.saveInstall) els.saveInstall.hidden = true;
-      if (choice?.outcome === "accepted") {
-        await new Promise((resolve) => setTimeout(resolve, 300));
-      }
-    } catch {
-      deferredInstall = null;
-    }
-  }
+async function tryHere() {
   sessionStorage.setItem(SAVE_SKIP_KEY, "1");
   els.save.hidden = true;
   await startApp();
@@ -783,80 +761,6 @@ async function takeIncomingMove() {
   return true;
 }
 
-function parseGitHubRepo(value) {
-  const trimmed = (value || "").trim().replace(/\.git$/, "");
-  if (!trimmed) return null;
-  const match = trimmed.match(/github\.com\/([^/]+)\/([^/]+)\/?$/i) || trimmed.match(/^([^/]+)\/([^/]+)$/);
-  if (!match) return null;
-  return { owner: match[1], repo: match[2] };
-}
-
-function mimeFor(path) {
-  if (path.endsWith(".css")) return "text/css";
-  if (path.endsWith(".js")) return "text/javascript";
-  if (path.endsWith(".webmanifest")) return "application/manifest+json";
-  if (path.endsWith(".json")) return "application/json";
-  if (path.endsWith(".png")) return "image/png";
-  if (path.endsWith(".html") || path.endsWith("/")) return "text/html; charset=utf-8";
-  return "application/octet-stream";
-}
-
-async function fetchVersionJson(base) {
-  const url = `${base.replace(/\/$/, "")}/version.json?t=${Date.now()}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error("Could not read version.json");
-  return { version: await res.json(), base: base.replace(/\/$/, "") };
-}
-
-async function loadRemoteVersion(repoUrl) {
-  const parsed = parseGitHubRepo(repoUrl);
-  if (parsed) {
-    const bases = [
-      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/cycle`,
-      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/apps/cycle`,
-      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD/static`,
-      `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/HEAD`,
-    ];
-    let lastErr = null;
-    for (const base of bases) {
-      try {
-        return await fetchVersionJson(base);
-      } catch (err) {
-        lastErr = err;
-      }
-    }
-    throw lastErr || new Error("Could not load that GitHub repo");
-  }
-  return fetchVersionJson(new URL("./", document.baseURI).href);
-}
-
-async function cacheRemoteFiles(base, files, version) {
-  const cache = await caches.open(`cycle-offline-${version || "dev"}`);
-  await Promise.all(
-    (files || []).map(async (file) => {
-      const remote = file === "./" ? `${base}/index.html` : `${base}/${file.replace(/^\.\//, "")}`;
-      const local = new URL(file === "./" ? "./index.html" : file, document.baseURI);
-      const res = await fetch(remote, { cache: "no-store" });
-      if (!res.ok) throw new Error(`Could not download ${file}`);
-      const body = await res.arrayBuffer();
-      await cache.put(
-        local.href,
-        new Response(body, {
-          headers: { "Content-Type": mimeFor(file), "Cache-Control": "public" },
-        })
-      );
-      if (file === "./index.html" || file === "./") {
-        await cache.put(
-          new URL("./", document.baseURI).href,
-          new Response(body, {
-            headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public" },
-          })
-        );
-      }
-    })
-  );
-}
-
 async function applyServiceWorkerUpdate() {
   if (!("serviceWorker" in navigator)) return false;
   const reg = await navigator.serviceWorker.getRegistration();
@@ -867,38 +771,6 @@ async function applyServiceWorkerUpdate() {
     return true;
   }
   return false;
-}
-
-async function checkForUpdates() {
-  setDataMessage("Checking…");
-  const repo = els.gitRepo.value.trim();
-  localStorage.setItem(GIT_REPO_KEY, repo);
-  try {
-    const remote = await loadRemoteVersion(repo);
-    const remoteVersion = remote.version?.version || "";
-    if (repo && remoteVersion && remoteVersion !== appVersion) {
-      await cacheRemoteFiles(remote.base, remote.version.files, remoteVersion);
-      waitingForUpdate = true;
-      setDataMessage(`Updated to ${remoteVersion}. Reloading…`);
-      const waiting = await applyServiceWorkerUpdate();
-      if (!waiting) location.reload();
-      return;
-    }
-    waitingForUpdate = true;
-    const waiting = await applyServiceWorkerUpdate();
-    if (waiting) {
-      setDataMessage("Update found. Reloading…");
-      return;
-    }
-    waitingForUpdate = false;
-    if (remoteVersion && remoteVersion === appVersion) {
-      setDataMessage(`Already up to date (${appVersion}).`);
-      return;
-    }
-    setDataMessage(remoteVersion ? `App ${remoteVersion} is current.` : "No update found.");
-  } catch (err) {
-    setDataMessage(err.message || "Could not check for updates.", true);
-  }
 }
 
 async function exportBackup() {
@@ -995,7 +867,6 @@ async function loadAppVersion() {
 }
 
 async function startApp() {
-  els.gitRepo.value = localStorage.getItem(GIT_REPO_KEY) || "";
   if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});
 
   const status = await db.getStatus();
@@ -1047,15 +918,18 @@ els.saveInstall.addEventListener("click", async () => {
   const choice = await deferredInstall.userChoice;
   deferredInstall = null;
   els.saveInstall.hidden = true;
-  if (choice?.outcome === "accepted" && els.saveOpen) els.saveOpen.hidden = false;
+  if (choice?.outcome === "accepted" && els.saveFind) {
+    els.saveFind.textContent = "It's on your Home Screen. Go open Cycle from there.";
+  }
 });
 
-els.saveOpen.addEventListener("click", () => {
-  openPhoneApp();
+els.saveTry.addEventListener("click", () => {
+  tryHere();
 });
 
 window.addEventListener("appinstalled", () => {
   if (els.saveInstall) els.saveInstall.hidden = true;
+  if (els.saveFind) els.saveFind.textContent = "It's on your Home Screen. Go open Cycle from there.";
 });
 
 els.stayBtn.addEventListener("click", async () => {
@@ -1231,14 +1105,6 @@ els.importFile.addEventListener("change", async () => {
   } catch (err) {
     setDataMessage(err.message || "Could not import that file.", true);
   }
-});
-
-els.gitRepo.addEventListener("change", () => {
-  localStorage.setItem(GIT_REPO_KEY, els.gitRepo.value.trim());
-});
-
-els.updateBtn.addEventListener("click", () => {
-  checkForUpdates();
 });
 
 els.resetBtn.addEventListener("click", async () => {

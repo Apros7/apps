@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.9",
-  "message": "Make Open actually enter Cycle",
+  "version": "2026.09.21.10",
+  "message": "Send people to the Home Screen app and drop the git repo field",
   "files": [
     "./",
     "./index.html",
