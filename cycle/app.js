@@ -294,7 +294,7 @@ function updateStatus() {
 function syncWeightInput() {
   const entry = weights.find((item) => item.date === els.weightDate.value);
   els.weightValue.value = entry ? String(entry.weight_kg) : "";
-  els.weightMessage.textContent = entry ? "Saved — change the number to update it." : "";
+  els.weightMessage.textContent = entry ? "Saved. Change the number to update it." : "";
   els.weightMessage.classList.remove("error");
 }
 
@@ -516,7 +516,7 @@ function renderCalendar() {
   }
 
   els.hint.textContent = rangeStart
-    ? `Started ${formatShort(rangeStart)} — tap the last day.`
+    ? `Started ${formatShort(rangeStart)}. Tap the last day.`
     : "Tap a day to start a period, then tap the end day.";
 }
 
@@ -560,7 +560,7 @@ async function onDayClick(iso, logged) {
 
 function openSheet(period) {
   activePeriodId = period.id;
-  els.sheetRange.textContent = `${formatShort(period.start)} – ${formatShort(period.end)}`;
+  els.sheetRange.textContent = `${formatShort(period.start)} to ${formatShort(period.end)}`;
   els.sheet.hidden = false;
   els.sheetBackdrop.hidden = false;
 }
@@ -823,7 +823,7 @@ els.pinForm.addEventListener("submit", async (e) => {
   els.pinError.hidden = true;
   const pin = els.pinInput.value.trim();
   if (!/^\d{4,12}$/.test(pin)) {
-    els.pinError.textContent = "Use 4–12 digits.";
+    els.pinError.textContent = "Use 4-12 digits.";
     els.pinError.hidden = false;
     return;
   }

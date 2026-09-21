@@ -150,7 +150,7 @@ export async function setWeightEnabled(enabled) {
 }
 
 export async function setupPin(pin, options = {}) {
-  if (!/^\d{4,12}$/.test(pin)) fail("PIN must be 4–12 digits");
+  if (!/^\d{4,12}$/.test(pin)) fail("PIN must be 4-12 digits");
   checkPinRateLimit();
   if ((await getConfig())?.hash) fail("PIN already set");
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -170,7 +170,7 @@ export async function setupPin(pin, options = {}) {
 }
 
 export async function unlockPin(pin) {
-  if (!/^\d{4,12}$/.test(pin)) fail("PIN must be 4–12 digits");
+  if (!/^\d{4,12}$/.test(pin)) fail("PIN must be 4-12 digits");
   checkPinRateLimit();
   const config = await getConfig();
   if (!config?.hash) fail("PIN not set yet");
