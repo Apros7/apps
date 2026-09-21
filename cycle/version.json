@@ -1,0 +1,25 @@
+{
+  "version": "2026.09.21",
+  "message": "On-device Cycle app",
+  "files": [
+    "./",
+    "./index.html",
+    "./styles.css",
+    "./app.js",
+    "./storage.js",
+    "./sw.js",
+    "./manifest.webmanifest",
+    "./version.json",
+    "./icons/apple-touch-icon.png",
+    "./icons/icon-192.png",
+    "./icons/icon-512.png",
+    "./icons/icon-512-maskable.png",
+    "./icons/splash-1125x2436.png",
+    "./icons/splash-1170x2532.png",
+    "./icons/splash-1179x2556.png",
+    "./icons/splash-1242x2688.png",
+    "./icons/splash-1284x2778.png",
+    "./icons/splash-1290x2796.png",
+    "./icons/splash-750x1334.png"
+  ]
+}

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#F6EBE6" />
+    <meta name="color-scheme" content="light" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Cycle" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="./icons/icon-512.png" />
+
+    <!-- iOS splash screens -->
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1290x2796.png"
+      media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1179x2556.png"
+      media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1284x2778.png"
+      media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1170x2532.png"
+      media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1125x2436.png"
+      media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-1242x2688.png"
+      media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="./icons/splash-750x1334.png"
+      media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)"
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <title>Cycle</title>
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true"></div>
+
+    <main id="app">
+      <!-- PIN gate -->
+      <section id="gate" class="screen gate" hidden>
+        <div class="gate-inner">
+          <div class="mark" aria-hidden="true"></div>
+          <p class="brand">Cycle</p>
+          <h1 id="gate-title">Welcome</h1>
+          <p id="gate-subtitle" class="subtitle">Choose a PIN to keep this private on this phone.</p>
+          <form id="pin-form" class="pin-form" autocomplete="off">
+            <input
+              id="pin-input"
+              type="password"
+              inputmode="numeric"
+              pattern="[0-9]*"
+              maxlength="12"
+              minlength="4"
+              placeholder="••••"
+              aria-label="PIN"
+              required
+            />
+            <p id="pin-error" class="error" role="alert" hidden></p>
+            <button type="submit" id="pin-submit" class="btn primary">Continue</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Calendar -->
+      <section id="tracker" class="screen tracker" hidden>
+        <header class="top">
+          <div>
+            <p class="brand small">Cycle</p>
+            <p id="status-line" class="status">Add a few periods to see a prediction.</p>
+          </div>
+          <button type="button" id="lock-btn" class="btn ghost" aria-label="Lock">Lock</button>
+        </header>
+
+        <div class="cal-nav">
+          <button type="button" id="prev-month" class="btn icon" aria-label="Previous month">
+            ‹
+          </button>
+          <h2 id="month-label" class="month-label"></h2>
+          <button type="button" id="next-month" class="btn icon" aria-label="Next month">
+            ›
+          </button>
+        </div>
+
+        <div class="weekday-row" aria-hidden="true">
+          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span
+          ><span>Sat</span><span>Sun</span>
+        </div>
+
+        <div id="calendar" class="calendar" role="grid" aria-labelledby="month-label"></div>
+
+        <p id="hint" class="hint">Tap a day to start a period, then tap the end day.</p>
+
+        <div class="legend">
+          <span><i class="swatch logged"></i> Period</span>
+          <span><i class="swatch predicted"></i> Next</span>
+          <span><i class="swatch fertile"></i> Fertile</span>
+          <span><i class="swatch peak"></i> Peak</span>
+        </div>
+
+        <section class="weight-card" aria-labelledby="weight-title">
+          <div class="weight-heading">
+            <div>
+              <h2 id="weight-title">Weight</h2>
+              <p id="weight-summary" class="weight-summary">Add today’s weight</p>
+            </div>
+            <button
+              type="button"
+              id="toggle-weight-chart"
+              class="btn ghost weight-toggle"
+              aria-expanded="false"
+              aria-controls="weight-chart-wrap"
+            >
+              Show trend
+            </button>
+          </div>
+
+          <form id="weight-form" class="weight-form">
+            <label class="field">
+              <span>Date</span>
+              <input id="weight-date" type="date" required />
+            </label>
+            <label class="field weight-value-field">
+              <span>Weight (kg)</span>
+              <input
+                id="weight-value"
+                type="number"
+                inputmode="decimal"
+                min="25"
+                max="400"
+                step="0.1"
+                placeholder="65.0"
+                required
+              />
+            </label>
+            <button type="submit" id="save-weight" class="btn primary weight-save">Save</button>
+          </form>
+          <p id="weight-message" class="weight-message" role="status"></p>
+
+          <div id="weight-chart-wrap" class="weight-chart-wrap" hidden>
+            <div id="weight-chart" class="weight-chart" role="img" aria-label="Weight over time"></div>
+            <p id="weight-chart-empty" class="weight-chart-empty" hidden>
+              Add at least two entries to see your trend.
+            </p>
+          </div>
+        </section>
+
+        <section class="weight-card data-card" aria-labelledby="data-title">
+          <div class="weight-heading">
+            <div>
+              <h2 id="data-title">This phone</h2>
+              <p id="data-summary" class="weight-summary">Logs stay on this device.</p>
+            </div>
+          </div>
+          <p id="install-hint" class="data-note">
+            In Safari, tap Share → Add to Home Screen so Cycle stays on your phone even without
+            this website.
+          </p>
+          <div class="data-actions">
+            <button type="button" id="export-btn" class="btn primary">Export backup</button>
+            <button type="button" id="import-btn" class="btn secondary">Import backup</button>
+            <input id="import-file" type="file" accept="application/json,.json" hidden />
+          </div>
+          <label class="field data-repo">
+            <span>Git repo for updates (optional)</span>
+            <input
+              id="git-repo"
+              type="url"
+              inputmode="url"
+              placeholder="https://github.com/Apros7/local-fundamental-apps"
+              autocomplete="off"
+            />
+          </label>
+          <button type="button" id="update-btn" class="btn secondary data-update">
+            Check for updates
+          </button>
+          <p id="data-message" class="weight-message" role="status"></p>
+        </section>
+      </section>
+    </main>
+
+    <!-- Edit sheet -->
+    <div id="sheet-backdrop" class="sheet-backdrop" hidden></div>
+    <aside id="edit-sheet" class="sheet" hidden role="dialog" aria-labelledby="sheet-title">
+      <div class="sheet-handle" aria-hidden="true"></div>
+      <h3 id="sheet-title">Period</h3>
+      <p id="sheet-range" class="sheet-range"></p>
+      <div class="sheet-actions">
+        <button type="button" id="delete-period" class="btn danger">Delete</button>
+        <button type="button" id="close-sheet" class="btn primary">Done</button>
+      </div>
+    </aside>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>
