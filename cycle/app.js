@@ -192,13 +192,13 @@ function saveStepsForDevice() {
       ];
     case "android":
       return [
-        "Tap Add to this phone, or the three dots, then Install app.",
-        "Tap Open.",
+        "Tap Add to this phone, or Install app in the menu.",
+        "Next time, open Cycle from your Home Screen.",
       ];
     default:
       return [
         "Add Cycle to your Home Screen.",
-        "Tap Open to use it as an app.",
+        "Next time, open it from that icon.",
       ];
   }
 }
@@ -217,14 +217,11 @@ function showSave() {
   const moved = sessionStorage.getItem(MOVED_KEY) === "1";
   if (moved && els.saveTitle && els.saveSubtitle) {
     els.saveTitle.textContent = "Logs are on this phone";
-    els.saveSubtitle.textContent = "Now save Cycle to your Home Screen. Then open that app.";
+    els.saveSubtitle.textContent = "Save Cycle to your Home Screen, then open that icon.";
   }
-  const ios = deviceKind().startsWith("ios");
-  if (els.saveOpen) els.saveOpen.hidden = ios;
+  if (els.saveOpen) els.saveOpen.hidden = false;
   if (els.saveFind) {
-    els.saveFind.textContent = ios
-      ? "Open it from your Home Screen <3"
-      : "Then it opens as an app, not a website.";
+    els.saveFind.textContent = "Next time, tap Cycle on your Home Screen.";
   }
   const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
   if (els.saveError) {
@@ -239,25 +236,26 @@ function shouldShowSave() {
 }
 
 async function openPhoneApp() {
-  if (isStandalone()) {
-    sessionStorage.setItem(SAVE_SKIP_KEY, "1");
-    els.save.hidden = true;
-    await startApp();
-    return;
-  }
-  if (deferredInstall) {
+  if (
+    deferredInstall &&
+    !isStandalone() &&
+    (deviceKind() === "android" || deviceKind() === "other")
+  ) {
     try {
       deferredInstall.prompt();
       const choice = await deferredInstall.userChoice;
       deferredInstall = null;
       if (els.saveInstall) els.saveInstall.hidden = true;
-      if (choice?.outcome !== "accepted") return;
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      if (choice?.outcome === "accepted") {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+      }
     } catch {
       deferredInstall = null;
     }
   }
-  location.href = "web+cycle://open";
+  sessionStorage.setItem(SAVE_SKIP_KEY, "1");
+  els.save.hidden = true;
+  await startApp();
 }
 
 function showMoveError(el, err) {

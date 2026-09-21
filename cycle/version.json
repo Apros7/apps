@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.8",
-  "message": "Update Cycle on open and launch it as a phone app",
+  "version": "2026.09.21.9",
+  "message": "Make Open actually enter Cycle",
   "files": [
     "./",
     "./index.html",
