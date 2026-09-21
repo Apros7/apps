@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field, field_validator
@@ -34,6 +35,10 @@ PIN_WINDOW_SEC = 15 * 60
 PIN_MAX_ATTEMPTS = 8
 _pin_attempts: dict[str, deque[float]] = defaultdict(deque)
 
+NEW_APP_URL = "https://apros7.github.io/apps/cycle/"
+MIGRATE_TTL_SEC = 30 * 60
+migrate_tickets: dict[str, dict] = {}
+
 app = FastAPI(title="Period Tracker", docs_url=None, redoc_url=None)
 
 
@@ -49,6 +54,12 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://apros7.github.io"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+)
 
 
 def client_ip(request: Request) -> str:
@@ -117,6 +128,12 @@ class WeightUpsert(BaseModel):
 class WeightEntry(BaseModel):
     date: str
     weight_kg: float
+
+
+class MigrateCreate(BaseModel):
+    pin: str | None = None
+    periods: list[Period] = Field(default_factory=list)
+    weights: list[WeightEntry] = Field(default_factory=list)
 
 
 # ── Storage helpers ──────────────────────────────────────────────────────────
@@ -229,6 +246,54 @@ def api_login(body: PinBody, request: Request) -> dict:
 def api_logout(token: Annotated[str, Depends(require_auth)]) -> dict:
     sessions.discard(token)
     return {"ok": True}
+
+
+def _purge_migrate_tickets() -> None:
+    now = time.time()
+    expired = [key for key, item in migrate_tickets.items() if item["exp"] <= now]
+    for key in expired:
+        migrate_tickets.pop(key, None)
+
+
+@app.post("/api/migrate")
+def create_migrate(
+    body: MigrateCreate,
+    request: Request,
+    authorization: Annotated[str | None, Header()] = None,
+) -> dict:
+    authed = False
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.removeprefix("Bearer ").strip()
+        authed = token in sessions
+    if not authed:
+        if not body.pin:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        check_pin_rate_limit(request)
+        pin_hash = read_config().get("pin_hash")
+        if not pin_hash or not pwd_context.verify(body.pin, pin_hash):
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect PIN")
+    _purge_migrate_tickets()
+    periods = [item.model_dump() for item in body.periods]
+    weights = [item.model_dump() for item in body.weights]
+    if not periods and not weights:
+        periods = read_periods()
+        weights = read_weights()
+    token = secrets.token_urlsafe(16)
+    migrate_tickets[token] = {
+        "periods": periods,
+        "weights": weights,
+        "exp": time.time() + MIGRATE_TTL_SEC,
+    }
+    return {"token": token, "url": f"{NEW_APP_URL}?move={token}"}
+
+
+@app.get("/api/migrate/{token}")
+def take_migrate(token: str) -> dict:
+    _purge_migrate_tickets()
+    item = migrate_tickets.pop(token, None)
+    if not item:
+        raise HTTPException(status_code=404, detail="That move link expired. Try Move again.")
+    return {"periods": item["periods"], "weights": item["weights"]}
 
 
 # ── Period routes ───────────────────────────────────────────────────────────

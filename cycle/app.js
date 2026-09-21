@@ -3,9 +3,17 @@ import * as db from "./storage.js";
 const GIT_REPO_KEY = "cycle_git_repo";
 const HOSTED_TOKEN_KEY = "cycle_token";
 const SAVE_SKIP_KEY = "cycle_skip_save";
+const MOVED_KEY = "cycle_moved";
+const MOVED_WEIGHTS_KEY = "cycle_moved_has_weights";
+const MOVE_ERROR_KEY = "cycle_move_error";
+const NEW_APP_URL = "https://apros7.github.io/apps/cycle/";
+const OLD_APP_ORIGIN = "https://easysort-gpu1.tail9a1938.ts.net";
 
 const els = {
   save: document.getElementById("save"),
+  saveTitle: document.getElementById("save-title"),
+  saveSubtitle: document.getElementById("save-subtitle"),
+  saveError: document.getElementById("save-error"),
   saveSteps: document.getElementById("save-steps"),
   saveInstall: document.getElementById("save-install"),
   saveContinue: document.getElementById("save-continue"),
@@ -13,10 +21,15 @@ const els = {
   tracker: document.getElementById("tracker"),
   gateTitle: document.getElementById("gate-title"),
   gateSubtitle: document.getElementById("gate-subtitle"),
+  oldHostNote: document.getElementById("old-host-note"),
   pinForm: document.getElementById("pin-form"),
   pinInput: document.getElementById("pin-input"),
   pinError: document.getElementById("pin-error"),
   pinSubmit: document.getElementById("pin-submit"),
+  stayBtn: document.getElementById("stay-btn"),
+  moveBanner: document.getElementById("move-banner"),
+  moveBtn: document.getElementById("move-btn"),
+  moveError: document.getElementById("move-error"),
   weightOpt: document.getElementById("weight-opt"),
   weightEnabledInput: document.getElementById("weight-enabled"),
   weightCard: document.getElementById("weight-card"),
@@ -115,6 +128,12 @@ function periodOnDay(iso) {
   return periods.find((p) => p.start <= iso && iso <= p.end) || null;
 }
 
+function isOldHost() {
+  const host = location.hostname;
+  if (host.endsWith(".ts.net")) return true;
+  return (host === "localhost" || host === "127.0.0.1") && location.port === "8787";
+}
+
 function isStandalone() {
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
@@ -174,10 +193,27 @@ function showSave() {
     item.textContent = text;
     els.saveSteps.appendChild(item);
   }
+  const moved = sessionStorage.getItem(MOVED_KEY) === "1";
+  if (moved && els.saveTitle && els.saveSubtitle) {
+    els.saveTitle.textContent = "Logs are on this phone";
+    els.saveSubtitle.textContent = "Now save Cycle to your Home Screen. Then use that icon.";
+  }
+  const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
+  if (els.saveError) {
+    els.saveError.hidden = !moveError;
+    els.saveError.textContent = moveError || "";
+  }
 }
 
 function shouldShowSave() {
+  if (isOldHost()) return false;
   return !isStandalone() && sessionStorage.getItem(SAVE_SKIP_KEY) !== "1";
+}
+
+function showMoveError(el, err) {
+  if (!el) return;
+  el.textContent = err?.message || "Could not move the logs.";
+  el.hidden = false;
 }
 
 function setDataMessage(text, isError = false) {
@@ -415,23 +451,34 @@ function showGate(mode) {
   els.save.hidden = true;
   els.gate.hidden = false;
   els.tracker.hidden = true;
-  const asking = mode === "setup" || mode === "migrate";
+  const asking = mode === "setup";
   els.weightOpt.hidden = !asking;
-  if (asking) els.weightEnabledInput.checked = mode === "migrate";
+  if (asking) {
+    els.weightEnabledInput.checked = sessionStorage.getItem(MOVED_WEIGHTS_KEY) === "1";
+  }
+  if (els.stayBtn) els.stayBtn.hidden = mode !== "migrate";
+  if (els.oldHostNote) {
+    els.oldHostNote.hidden = !(isOldHost() && mode === "unlock");
+  }
   if (mode === "setup") {
     els.gateTitle.textContent = "Welcome";
     els.gateSubtitle.textContent = "Pick a PIN. Stays on this phone.";
     els.pinSubmit.textContent = "Create PIN";
   } else if (mode === "migrate") {
-    els.gateTitle.textContent = "Move here";
-    els.gateSubtitle.textContent = "Enter your PIN. Stays on this phone.";
-    els.pinSubmit.textContent = "Copy to this phone";
+    els.gateTitle.textContent = "Move to the new app";
+    els.gateSubtitle.textContent = "Enter your PIN. We copy your logs, then you save the new app to your Home Screen.";
+    els.pinSubmit.textContent = "Move to the new app";
   } else {
     els.gateTitle.textContent = "Hello";
     els.gateSubtitle.textContent = "Enter your PIN.";
     els.pinSubmit.textContent = "Unlock";
   }
   els.pinError.hidden = true;
+  const moveError = sessionStorage.getItem(MOVE_ERROR_KEY);
+  if (moveError && mode === "setup") {
+    els.pinError.textContent = moveError;
+    els.pinError.hidden = false;
+  }
   els.pinInput.value = "";
   els.pinInput.focus();
 }
@@ -440,6 +487,7 @@ function showTracker() {
   els.save.hidden = true;
   els.gate.hidden = true;
   els.tracker.hidden = false;
+  if (els.moveBanner) els.moveBanner.hidden = !isOldHost();
   applyWeightVisibility();
   renderCalendar();
   updateStatus();
@@ -581,12 +629,96 @@ async function migrateFromHosted(pin, wantWeight) {
     hostedApi("./api/periods"),
     hostedApi("./api/weights"),
   ]);
-  await db.setupPin(pin, { weightEnabled: wantWeight });
+  await db.setupPin(pin, {
+    weightEnabled: typeof wantWeight === "boolean" ? wantWeight : remoteWeights.length > 0,
+  });
   await db.replaceAll({
     periods: remotePeriods,
     weights: remoteWeights,
   });
-  sessionStorage.removeItem(HOSTED_TOKEN_KEY);
+}
+
+async function loginHosted(pin) {
+  const result = await hostedApi("./api/login", {
+    method: "POST",
+    body: JSON.stringify({ pin }),
+  });
+  sessionStorage.setItem(HOSTED_TOKEN_KEY, result.token);
+  return result.token;
+}
+
+async function moveToNewApp({ pin, remote } = {}) {
+  if (pin) await loginHosted(pin);
+  let nextPeriods = periods;
+  let nextWeights = weights;
+  if (remote || (!nextPeriods.length && !nextWeights.length)) {
+    const [remotePeriods, remoteWeights] = await Promise.all([
+      hostedApi("./api/periods"),
+      hostedApi("./api/weights"),
+    ]);
+    nextPeriods = remotePeriods;
+    nextWeights = remoteWeights;
+  }
+  const result = await hostedApi("./api/migrate", {
+    method: "POST",
+    body: JSON.stringify({ periods: nextPeriods, weights: nextWeights }),
+  });
+  if (!result?.url) throw new Error("Could not start the move.");
+  location.href = result.url;
+}
+
+function consumeMoveToken() {
+  const params = new URLSearchParams(location.search);
+  const token = params.get("move");
+  if (!token) return "";
+  const url = new URL(location.href);
+  url.searchParams.delete("move");
+  history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
+  return token;
+}
+
+async function takeIncomingMove() {
+  const token = consumeMoveToken();
+  if (!token) return false;
+  const res = await fetch(`${OLD_APP_ORIGIN}/api/migrate/${encodeURIComponent(token)}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    let detail = "That move link expired. Open the old Cycle and tap Move again.";
+    try {
+      const body = await res.json();
+      if (typeof body.detail === "string") detail = body.detail;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(detail);
+  }
+  const data = await res.json();
+  const incoming = {
+    periods: Array.isArray(data.periods) ? data.periods : [],
+    weights: Array.isArray(data.weights) ? data.weights : [],
+  };
+  const status = await db.getStatus();
+  const existing = status.setup_complete
+    ? await Promise.all([db.listPeriods(), db.listWeights()])
+    : [[], []];
+  const [existingPeriods, existingWeights] = existing;
+  if (existingPeriods.length || existingWeights.length) {
+    const ok = window.confirm(
+      "Replace the logs on this phone with the ones from the old Cycle?"
+    );
+    if (!ok) return false;
+  }
+  await db.replaceAll(incoming);
+  sessionStorage.setItem(MOVED_KEY, "1");
+  if (incoming.weights.length) {
+    sessionStorage.setItem(MOVED_WEIGHTS_KEY, "1");
+    if ((await db.getStatus()).setup_complete) await db.setWeightEnabled(true);
+  } else {
+    sessionStorage.removeItem(MOVED_WEIGHTS_KEY);
+  }
+  sessionStorage.removeItem(MOVE_ERROR_KEY);
+  return true;
 }
 
 function parseGitHubRepo(value) {
@@ -779,7 +911,7 @@ async function startApp() {
     return;
   }
 
-  const hosted = await probeHosted();
+  const hosted = isOldHost() ? await probeHosted() : null;
   if (hosted?.setup_complete) {
     showGate("migrate");
     return;
@@ -790,6 +922,11 @@ async function startApp() {
 async function bootstrap() {
   registerWorker();
   loadAppVersion().then(() => renderDataCard());
+  try {
+    await takeIncomingMove();
+  } catch (err) {
+    sessionStorage.setItem(MOVE_ERROR_KEY, err.message || "Could not copy the old logs.");
+  }
   if (shouldShowSave()) {
     showSave();
     return;
@@ -818,6 +955,47 @@ els.saveInstall.addEventListener("click", async () => {
   els.saveInstall.hidden = true;
 });
 
+els.stayBtn.addEventListener("click", async () => {
+  els.pinError.hidden = true;
+  const pin = els.pinInput.value.trim();
+  if (!/^\d{4,12}$/.test(pin)) {
+    els.pinError.textContent = "Use 4-12 digits.";
+    els.pinError.hidden = false;
+    return;
+  }
+  try {
+    await migrateFromHosted(pin);
+    await loadLocal();
+    showTracker();
+  } catch (err) {
+    els.pinError.textContent = err.message || "Could not continue.";
+    els.pinError.hidden = false;
+  }
+});
+
+els.moveBtn.addEventListener("click", async () => {
+  if (els.moveError) els.moveError.hidden = true;
+  els.moveBtn.disabled = true;
+  try {
+    await moveToNewApp();
+  } catch (err) {
+    if (err.status === 401) {
+      const pin = window.prompt("Enter your Cycle PIN to move the logs.");
+      if (!pin) return;
+      try {
+        await moveToNewApp({ pin });
+        return;
+      } catch (retryErr) {
+        showMoveError(els.moveError, retryErr);
+        return;
+      }
+    }
+    showMoveError(els.moveError, err);
+  } finally {
+    els.moveBtn.disabled = false;
+  }
+});
+
 els.pinForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   els.pinError.hidden = true;
@@ -835,9 +1013,17 @@ els.pinForm.addEventListener("submit", async (e) => {
       weights = [];
       weightEnabled = wantWeight;
     } else if (gateMode === "migrate") {
-      await migrateFromHosted(pin, els.weightEnabledInput.checked);
+      await moveToNewApp({ pin, remote: true });
+      return;
     } else {
       await db.unlockPin(pin);
+      if (isOldHost()) {
+        try {
+          await loginHosted(pin);
+        } catch {
+          /* local unlock still works */
+        }
+      }
     }
     await loadLocal();
     showTracker();

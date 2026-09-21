@@ -40,10 +40,33 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (event.request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/api/")) return;
+  if (url.pathname.includes("/api/")) return;
+
+  const networkFirst =
+    event.request.mode === "navigate" ||
+    url.pathname.endsWith("/") ||
+    url.pathname.endsWith("/index.html") ||
+    url.pathname.endsWith("/app.js") ||
+    url.pathname.endsWith("/sw.js");
 
   event.respondWith(
     (async () => {
+      if (networkFirst) {
+        try {
+          const fresh = await fetch(event.request);
+          const cache = await caches.open(CACHE);
+          cache.put(event.request, fresh.clone());
+          return fresh;
+        } catch (err) {
+          const cached = await caches.match(event.request, { ignoreSearch: true });
+          if (cached) return cached;
+          if (event.request.mode === "navigate") {
+            const fallback = await caches.match("./index.html");
+            if (fallback) return fallback;
+          }
+          throw err;
+        }
+      }
       const cached = await caches.match(event.request, { ignoreSearch: true });
       if (cached) return cached;
       try {

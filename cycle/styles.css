@@ -205,6 +205,10 @@ body {
   gap: 0.85rem;
 }
 
+.pin-form .btn {
+  width: 100%;
+}
+
 #pin-input {
   width: 100%;
   border: 1px solid var(--line);
@@ -298,6 +302,35 @@ body {
   font-size: 0.95rem;
   max-width: 19rem;
   line-height: 1.4;
+}
+
+.move-banner {
+  margin: 0 0 1.2rem;
+  padding: 1rem 1.1rem;
+  border-radius: 18px;
+  background: rgba(176, 61, 79, 0.1);
+  border: 1px solid rgba(176, 61, 79, 0.22);
+}
+
+.move-banner p {
+  margin: 0 0 0.8rem;
+  line-height: 1.4;
+}
+
+.move-banner .btn {
+  width: 100%;
+}
+
+.move-banner .error {
+  margin: 0.7rem 0 0;
+}
+
+#stay-btn {
+  width: 100%;
+}
+
+.save-inner .error {
+  margin-top: 0.7rem;
 }
 
 .cal-nav {

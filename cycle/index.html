@@ -72,8 +72,9 @@
         <div class="gate-inner save-inner">
           <div class="mark" aria-hidden="true"></div>
           <p class="brand">Cycle</p>
-          <h1>Put Cycle on your phone</h1>
-          <p class="subtitle">Then it is just an app on your Home Screen. Your logs stay on this phone.</p>
+          <h1 id="save-title">Put Cycle on your phone</h1>
+          <p id="save-subtitle" class="subtitle">Then it is just an app on your Home Screen. Your logs stay on this phone.</p>
+          <p id="save-error" class="error" hidden></p>
           <ol id="save-steps" class="save-steps"></ol>
           <button type="button" id="save-install" class="btn primary" hidden>Add to this phone</button>
           <button type="button" id="save-continue" class="btn secondary">Continue</button>
@@ -87,6 +88,7 @@
           <p class="brand">Cycle</p>
           <h1 id="gate-title">Welcome</h1>
           <p id="gate-subtitle" class="subtitle">Pick a PIN. Stays on this phone.</p>
+          <p id="old-host-note" class="subtitle" hidden>This old page is closing. Unlock, then tap Move to the new app.</p>
           <form id="pin-form" class="pin-form" autocomplete="off">
             <input
               id="pin-input"
@@ -105,6 +107,7 @@
             </label>
             <p id="pin-error" class="error" role="alert" hidden></p>
             <button type="submit" id="pin-submit" class="btn primary">Continue</button>
+            <button type="button" id="stay-btn" class="btn secondary" hidden>Stay on this page</button>
           </form>
         </div>
       </section>
@@ -118,6 +121,12 @@
           </div>
           <button type="button" id="lock-btn" class="btn ghost" aria-label="Lock">Lock</button>
         </header>
+
+        <aside id="move-banner" class="move-banner" hidden>
+          <p>There is a new Cycle. Move your logs there, then save that app to your Home Screen.</p>
+          <button type="button" id="move-btn" class="btn primary">Move to the new app</button>
+          <p id="move-error" class="error" hidden></p>
+        </aside>
 
         <div class="cal-nav">
           <button type="button" id="prev-month" class="btn icon" aria-label="Previous month">
