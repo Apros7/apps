@@ -144,8 +144,13 @@ body {
   width: 100%;
 }
 
-.save-inner .btn.secondary {
-  margin-top: 0.7rem;
+.save-find {
+  margin: 1rem 0 0;
+  font-family: "Fraunces", Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  font-size: 1.2rem;
+  line-height: 1.35;
+  color: var(--berry-deep);
 }
 
 .mark {

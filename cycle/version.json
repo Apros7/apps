@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21.5",
-  "message": "Move from the old Cycle to the new app",
+  "version": "2026.09.21.6",
+  "message": "After saving Cycle, send people to the Home Screen icon",
   "files": [
     "./",
     "./index.html",

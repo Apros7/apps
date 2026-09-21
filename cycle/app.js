@@ -16,7 +16,7 @@ const els = {
   saveError: document.getElementById("save-error"),
   saveSteps: document.getElementById("save-steps"),
   saveInstall: document.getElementById("save-install"),
-  saveContinue: document.getElementById("save-continue"),
+  saveFind: document.getElementById("save-find"),
   gate: document.getElementById("gate"),
   tracker: document.getElementById("tracker"),
   gateTitle: document.getElementById("gate-title"),
@@ -941,18 +941,19 @@ window.addEventListener("beforeinstallprompt", (event) => {
   if (els.saveInstall && !els.save.hidden) els.saveInstall.hidden = false;
 });
 
-els.saveContinue.addEventListener("click", async () => {
-  sessionStorage.setItem(SAVE_SKIP_KEY, "1");
-  els.save.hidden = true;
-  await startApp();
-});
-
 els.saveInstall.addEventListener("click", async () => {
   if (!deferredInstall) return;
   deferredInstall.prompt();
-  await deferredInstall.userChoice;
+  const choice = await deferredInstall.userChoice;
   deferredInstall = null;
   els.saveInstall.hidden = true;
+  if (choice?.outcome === "accepted" && els.saveFind) {
+    els.saveFind.textContent = "go find the app on your phone now <3";
+  }
+});
+
+window.addEventListener("appinstalled", () => {
+  if (els.saveInstall) els.saveInstall.hidden = true;
 });
 
 els.stayBtn.addEventListener("click", async () => {
