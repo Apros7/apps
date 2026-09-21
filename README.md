@@ -6,4 +6,4 @@ Site: https://apros7.github.io/local-fundamental-apps/
 
 - [Cycle](./cycle/) — period tracker. Open in Safari, then Share → Add to Home Screen.
 
-Logs never leave the device. Export a backup if you want to move them to another phone.
+Logs never leave the device. You can export your data anytime. We do not keep any of it.

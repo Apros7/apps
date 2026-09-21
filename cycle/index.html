@@ -75,6 +75,10 @@
           <p class="brand">Cycle</p>
           <h1 id="gate-title">Welcome</h1>
           <p id="gate-subtitle" class="subtitle">Choose a PIN to keep this private on this phone.</p>
+          <p class="privacy">
+            Everything stays on this device. You can export your data anytime. We do not keep any of
+            it.
+          </p>
           <form id="pin-form" class="pin-form" autocomplete="off">
             <input
               id="pin-input"
@@ -87,6 +91,10 @@
               aria-label="PIN"
               required
             />
+            <label id="weight-opt" class="opt">
+              <input id="weight-enabled" type="checkbox" />
+              Also track weight
+            </label>
             <p id="pin-error" class="error" role="alert" hidden></p>
             <button type="submit" id="pin-submit" class="btn primary">Continue</button>
           </form>
@@ -129,7 +137,7 @@
           <span><i class="swatch peak"></i> Peak</span>
         </div>
 
-        <section class="weight-card" aria-labelledby="weight-title">
+        <section id="weight-card" class="weight-card" aria-labelledby="weight-title" hidden>
           <div class="weight-heading">
             <div>
               <h2 id="weight-title">Weight</h2>
@@ -183,10 +191,17 @@
               <p id="data-summary" class="weight-summary">Logs stay on this device.</p>
             </div>
           </div>
+          <p class="privacy data-privacy">
+            Everything stays on this device. You can export your data anytime. We do not keep any of
+            it.
+          </p>
           <p id="install-hint" class="data-note">
             In Safari, tap Share → Add to Home Screen so Cycle stays on your phone even without
             this website.
           </p>
+          <button type="button" id="toggle-weight-feature" class="btn ghost weight-feature">
+            Add weight tracking
+          </button>
           <div class="data-actions">
             <button type="button" id="export-btn" class="btn primary">Export backup</button>
             <button type="button" id="import-btn" class="btn secondary">Import backup</button>

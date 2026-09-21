@@ -121,15 +121,35 @@ export async function getConfig() {
   return (await requestToPromise(db.transaction("meta").objectStore("meta").get("config"))) || null;
 }
 
+export function isWeightEnabled(config) {
+  if (typeof config?.weight_enabled === "boolean") return config.weight_enabled;
+  return true;
+}
+
 export async function getStatus() {
   const config = await getConfig();
   return {
     setup_complete: Boolean(config?.hash),
     authenticated: isUnlocked(),
+    weight_enabled: isWeightEnabled(config),
   };
 }
 
-export async function setupPin(pin) {
+export async function patchConfig(patch) {
+  const config = (await getConfig()) || {};
+  const next = { ...config, ...patch };
+  const db = await openDb();
+  const tx = db.transaction("meta", "readwrite");
+  tx.objectStore("meta").put(next, "config");
+  await txDone(tx);
+  return next;
+}
+
+export async function setWeightEnabled(enabled) {
+  await patchConfig({ weight_enabled: Boolean(enabled) });
+}
+
+export async function setupPin(pin, options = {}) {
   if (!/^\d{4,12}$/.test(pin)) fail("PIN must be 4–12 digits");
   checkPinRateLimit();
   if ((await getConfig())?.hash) fail("PIN already set");
@@ -140,6 +160,7 @@ export async function setupPin(pin) {
     hash,
     iterations: PBKDF2_ITERATIONS,
     created_at: new Date().toISOString(),
+    weight_enabled: Boolean(options.weightEnabled),
   };
   const db = await openDb();
   const tx = db.transaction("meta", "readwrite");

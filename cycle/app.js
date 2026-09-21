@@ -12,6 +12,10 @@ const els = {
   pinInput: document.getElementById("pin-input"),
   pinError: document.getElementById("pin-error"),
   pinSubmit: document.getElementById("pin-submit"),
+  weightOpt: document.getElementById("weight-opt"),
+  weightEnabledInput: document.getElementById("weight-enabled"),
+  weightCard: document.getElementById("weight-card"),
+  toggleWeightFeature: document.getElementById("toggle-weight-feature"),
   statusLine: document.getElementById("status-line"),
   lockBtn: document.getElementById("lock-btn"),
   prevMonth: document.getElementById("prev-month"),
@@ -57,6 +61,7 @@ let activePeriodId = null;
 let gateMode = "setup";
 let appVersion = "";
 let waitingForUpdate = false;
+let weightEnabled = false;
 
 function startOfMonth(d) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -325,18 +330,29 @@ function renderWeights() {
 }
 
 function renderDataCard() {
-  const parts = [];
-  parts.push(`${periods.length} period${periods.length === 1 ? "" : "s"}`);
-  parts.push(`${weights.length} weight${weights.length === 1 ? "" : "s"}`);
+  const parts = [`${periods.length} period${periods.length === 1 ? "" : "s"}`];
+  if (weightEnabled) {
+    parts.push(`${weights.length} weight${weights.length === 1 ? "" : "s"}`);
+  }
   if (appVersion) parts.push(`app ${appVersion}`);
   els.dataSummary.textContent = `On this phone · ${parts.join(" · ")}`;
   els.installHint.hidden = isStandalone();
+  els.toggleWeightFeature.textContent = weightEnabled
+    ? "Turn off weight tracking"
+    : "Add weight tracking";
+}
+
+function applyWeightVisibility() {
+  els.weightCard.hidden = !weightEnabled;
 }
 
 function showGate(mode) {
   gateMode = mode;
   els.gate.hidden = false;
   els.tracker.hidden = true;
+  const asking = mode === "setup" || mode === "migrate";
+  els.weightOpt.hidden = !asking;
+  if (asking) els.weightEnabledInput.checked = mode === "migrate";
   if (mode === "setup") {
     els.gateTitle.textContent = "Welcome";
     els.gateSubtitle.textContent = "Choose a 4–12 digit PIN to keep this private on this phone.";
@@ -359,6 +375,7 @@ function showGate(mode) {
 function showTracker() {
   els.gate.hidden = true;
   els.tracker.hidden = false;
+  applyWeightVisibility();
   renderCalendar();
   updateStatus();
   renderWeights();
@@ -439,7 +456,10 @@ function renderCalendar() {
 }
 
 async function loadLocal() {
+  const status = await db.getStatus();
+  weightEnabled = status.weight_enabled;
   [periods, weights] = await Promise.all([db.listPeriods(), db.listWeights()]);
+  applyWeightVisibility();
   renderCalendar();
   updateStatus();
   renderWeights();
@@ -486,7 +506,7 @@ function closeSheet() {
   els.sheetBackdrop.hidden = true;
 }
 
-async function migrateFromHosted(pin) {
+async function migrateFromHosted(pin, wantWeight) {
   const result = await hostedApi("./api/login", {
     method: "POST",
     body: JSON.stringify({ pin }),
@@ -496,7 +516,7 @@ async function migrateFromHosted(pin) {
     hostedApi("./api/periods"),
     hostedApi("./api/weights"),
   ]);
-  await db.setupPin(pin);
+  await db.setupPin(pin, { weightEnabled: wantWeight });
   await db.replaceAll({
     periods: remotePeriods,
     weights: remoteWeights,
@@ -714,11 +734,13 @@ els.pinForm.addEventListener("submit", async (e) => {
   }
   try {
     if (gateMode === "setup") {
-      await db.setupPin(pin);
+      const wantWeight = els.weightEnabledInput.checked;
+      await db.setupPin(pin, { weightEnabled: wantWeight });
       periods = [];
       weights = [];
+      weightEnabled = wantWeight;
     } else if (gateMode === "migrate") {
-      await migrateFromHosted(pin);
+      await migrateFromHosted(pin, els.weightEnabledInput.checked);
     } else {
       await db.unlockPin(pin);
     }
@@ -825,6 +847,19 @@ els.gitRepo.addEventListener("change", () => {
 
 els.updateBtn.addEventListener("click", () => {
   checkForUpdates();
+});
+
+els.toggleWeightFeature.addEventListener("click", async () => {
+  try {
+    const next = !weightEnabled;
+    await db.setWeightEnabled(next);
+    weightEnabled = next;
+    applyWeightVisibility();
+    renderDataCard();
+    setDataMessage(next ? "Weight tracking is on." : "Weight tracking is off.");
+  } catch (err) {
+    setDataMessage(err.message || "Could not update that setting.", true);
+  }
 });
 
 document.addEventListener("keydown", (e) => {

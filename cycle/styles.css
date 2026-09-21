@@ -150,10 +150,32 @@ body {
 .subtitle,
 .status,
 .hint,
-.sheet-range {
+.sheet-range,
+.privacy {
   margin: 0;
   color: var(--stone);
   line-height: 1.45;
+}
+
+.privacy {
+  margin-top: 0.7rem;
+  font-size: 0.82rem;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  color: var(--ink);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.opt input {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--berry);
 }
 
 .pin-form {
@@ -596,6 +618,15 @@ body {
   color: var(--stone);
   font-size: 0.86rem;
   text-align: center;
+}
+
+.data-privacy {
+  margin: 0.7rem 0 0;
+}
+
+.weight-feature {
+  margin-top: 0.55rem;
+  padding-left: 0;
 }
 
 .data-note {

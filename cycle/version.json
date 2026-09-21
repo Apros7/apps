@@ -1,6 +1,6 @@
 {
-  "version": "2026.09.21",
-  "message": "On-device Cycle app",
+  "version": "2026.09.21.1",
+  "message": "Optional weight tracking",
   "files": [
     "./",
     "./index.html",
